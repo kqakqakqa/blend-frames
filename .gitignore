@@ -1,0 +1,7 @@
+
+build.bat
+blend-frames.bat
+blend-frames.spec
+/Python310
+/build
+/dist
