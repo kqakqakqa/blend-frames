@@ -76,9 +76,8 @@ def GetFrame(index, lastIndex):
 
     return frame
 
-videoOutput_path = (
-    f"{os.path.dirname(videoInput_path)}\\{os.path.splitext(os.path.basename(videoInput_path))[0]}_帧混合_{videoOutput_fps}fps_{videoOutput_frameCount}frames_{videoProcess_shutterAngle}%.mp4"
-)
+
+videoOutput_path = f"{os.path.dirname(videoInput_path)}\\{os.path.splitext(os.path.basename(videoInput_path))[0]}_帧混合_{videoOutput_fps}fps_{videoOutput_frameCount}frames_{videoProcess_shutterAngle}%.mp4"
 videoOutput = cv2.VideoWriter(
     videoOutput_path, videoOutput_fourcc, videoOutput_fps, (videoInput_width, videoInput_height)
 )
@@ -86,23 +85,30 @@ videoOutput = cv2.VideoWriter(
 with rich.progress.Progress() as progress:
     big_task = progress.add_task("帧混合中", total=videoOutput_frameCount)
     small_task = progress.add_task("", total=0)
+    videoOutput_frameProgressCount = 0
 
     for f in range(videoOutput_frameCount):
+        f2RangeStart = int(f * videoProcess_frameRatio)
+        f2RangeEnd = min(f2RangeStart + int(videoProcess_blendCount), videoInput_frameCount) - 1
+
         progress.reset(small_task)
         progress.update(
             small_task,
-            description=f"{int(f * videoProcess_frameRatio)} ~ {min(int(f * videoProcess_frameRatio + videoProcess_blendCount), videoInput_frameCount) - 1} of {int(f * videoProcess_frameRatio)} ~ {int((f + 1) * videoProcess_frameRatio) - 1}",
-            total=min(int(f * videoProcess_frameRatio + videoProcess_blendCount), videoInput_frameCount)
-            - int(f * videoProcess_frameRatio),
+            description=(
+                f"{f2RangeStart} ~ {f2RangeEnd} -> {videoOutput_frameProgressCount}"
+                + (
+                    f", 下一帧: {f2RangeStart + int(videoProcess_frameRatio)} "
+                    if (f < videoOutput_frameCount - 1)
+                    else ""
+                )
+            ),
+            total=f2RangeEnd - f2RangeStart + 1,
         )
         frameBlendedCount = 0
         frameBlended = []
         # framesToBlend = []
 
-        for f2 in range(
-            int(f * videoProcess_frameRatio),
-            min(int(f * videoProcess_frameRatio + videoProcess_blendCount), videoInput_frameCount),
-        ):
+        for f2 in range(f2RangeStart, f2RangeEnd + 1):
             frameCurrent = cv2.cvtColor(GetFrame(f2, lastIndex), cv2.COLOR_BGR2Lab).astype(numpy.float32)
             # framesToBlend.append(cv2.cvtColor(GetFrame(f2, lastIndex), cv2.COLOR_BGR2Lab).astype(numpy.float32))
             lastIndex = f2
@@ -118,6 +124,7 @@ with rich.progress.Progress() as progress:
         frameBlended = cv2.cvtColor(frameBlended.astype(numpy.uint8), cv2.COLOR_Lab2BGR)
         videoOutput.write(frameBlended)
         progress.update(big_task, advance=1)
+        videoOutput_frameProgressCount += 1
 
 videoInput.release()
 videoOutput.release()
