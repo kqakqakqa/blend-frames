@@ -33,11 +33,14 @@ videoOutput_fps = float(input("帧率: "))
 videoOutput_frameCount = max(int(input("帧数量: ")), 1)
 rich.print("")
 
+# config brightness
+videoProcess_brightnessScale = float(input("亮度缩放(倍): "))
+
 # config process
 videoProcess_shutterAngle = float(input("快门角度(%): "))
 videoProcess_frameRatio = videoInput_frameCount / videoOutput_frameCount
 videoProcess_blendCount = max(videoProcess_frameRatio * videoProcess_shutterAngle / 100, 1)
-rich.print(f"输入 {videoProcess_blendCount} of {videoProcess_frameRatio} 帧 -> 输出 {1} 帧\n")
+rich.print(f"每隔 {videoProcess_frameRatio} 帧, 混合 {videoProcess_blendCount} 帧 -> 输出为 1 帧\n")
 
 ########
 
@@ -110,6 +113,12 @@ with rich.progress.Progress() as progress:
 
         for f2 in range(f2RangeStart, f2RangeEnd + 1):
             frameCurrent = cv2.cvtColor(GetFrame(f2, lastIndex), cv2.COLOR_BGR2Lab).astype(numpy.float32)
+
+            # brightness
+            frameCurrent_L, frameCurrent_a, frameCurrent_b = cv2.split(frameCurrent)
+            frameCurrent_L = numpy.clip(frameCurrent_L * videoProcess_brightnessScale, 0, 255)
+            frameCurrent = cv2.merge([frameCurrent_L, frameCurrent_a, frameCurrent_b])
+
             # framesToBlend.append(cv2.cvtColor(GetFrame(f2, lastIndex), cv2.COLOR_BGR2Lab).astype(numpy.float32))
             lastIndex = f2
             if frameBlendedCount == 0:
